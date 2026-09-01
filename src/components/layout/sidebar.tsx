@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   FileText,
   Ruler,
+  Kanban,
   Scissors,
   CreditCard,
   Warehouse,
@@ -31,9 +32,10 @@ const navItems = [
   { href: "/leads", label: "Leads", icon: Target },
   { href: "/products", label: "Products", icon: Package },
   { href: "/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/production", label: "Production Pipeline", icon: Kanban },
   { href: "/quotations", label: "Quotations", icon: FileText },
   { href: "/measurements", label: "Measurements", icon: Ruler },
-  { href: "/tailoring", label: "Tailoring", icon: Scissors },
+  { href: "/production/my-tasks", label: "Tailor Workbench", icon: Scissors },
   { href: "/payments", label: "Payments", icon: CreditCard },
   { href: "/inventory", label: "Inventory", icon: Warehouse },
   { href: "/deliveries", label: "Deliveries", icon: Truck },
@@ -100,24 +102,26 @@ export function Sidebar({ className }: SidebarProps) {
               )}
               title={collapsed ? item.label : undefined}
             >
-              <Icon className="w-4.5 h-4.5 flex-shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              {!collapsed && <span>{item.label}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {/* Collapse button */}
+      {/* Collapse Toggle */}
       <div className="p-2 border-t border-sidebar-border">
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center py-2 rounded-md text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="flex items-center justify-center w-full py-2 rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors text-xs"
         >
           {collapsed ? (
             <ChevronRight className="w-4 h-4" />
           ) : (
-            <ChevronLeft className="w-4 h-4" />
+            <div className="flex items-center gap-2">
+              <ChevronLeft className="w-4 h-4" />
+              <span>Collapse</span>
+            </div>
           )}
         </button>
       </div>
