@@ -491,6 +491,116 @@ async function main() {
     ],
   });
 
+  // 16. Suppliers & Raw Material Inventory
+  const supplierSilk = await prisma.supplier.create({
+    data: {
+      name: "Sri Lakshmi Silks Wholesale",
+      contactPerson: "Rangarajan",
+      phone: "+91 94441 55667",
+      whatsapp: "+91 94441 55667",
+      address: "24 Weaver Street, Kanchipuram, Tamil Nadu",
+    },
+  });
+
+  const supplierZari = await prisma.supplier.create({
+    data: {
+      name: "Royal Zari & Lace Emporium",
+      contactPerson: "Mahesh Bhai",
+      phone: "+91 98251 33445",
+      whatsapp: "+91 98251 33445",
+      address: "Shop 14, Textile Market, Surat, Gujarat",
+    },
+  });
+
+  await prisma.inventoryItem.createMany({
+    data: [
+      {
+        name: "Pure Raw Silk - Peacock Blue",
+        sku: "FAB-SLK-BLU",
+        type: "FABRIC",
+        unit: "meters",
+        quantity: 24.5,
+        reorderThreshold: 5.0,
+        costPerUnit: 650,
+        supplierId: supplierSilk.id,
+        location: "Fabric Rack 1, Bin A",
+        branchId: mainBranch.id,
+      },
+      {
+        name: "Pure Raw Silk - Crimson Bridal Red",
+        sku: "FAB-SLK-RED",
+        type: "FABRIC",
+        unit: "meters",
+        quantity: 18.0,
+        reorderThreshold: 5.0,
+        costPerUnit: 650,
+        supplierId: supplierSilk.id,
+        location: "Fabric Rack 1, Bin B",
+        branchId: mainBranch.id,
+      },
+      {
+        name: "Tissue Gold Brocade - Festive Weave",
+        sku: "FAB-BRO-GLD",
+        type: "FABRIC",
+        unit: "meters",
+        quantity: 4.5, // Low stock
+        reorderThreshold: 5.0,
+        costPerUnit: 850,
+        supplierId: supplierSilk.id,
+        location: "Fabric Rack 2, Shelf 1",
+        branchId: mainBranch.id,
+      },
+      {
+        name: "Pure Cotton Mulmul Lining Cloth",
+        sku: "LIN-COT-WHT",
+        type: "LINING",
+        unit: "meters",
+        quantity: 65.0,
+        reorderThreshold: 15.0,
+        costPerUnit: 120,
+        supplierId: supplierSilk.id,
+        location: "Rolls Section - Shelf 3",
+        branchId: mainBranch.id,
+      },
+      {
+        name: "Handcrafted Antique Gold Cutwork Lace (2 inch)",
+        sku: "LAC-ANT-GLD",
+        type: "LACE",
+        unit: "meters",
+        quantity: 32.0,
+        reorderThreshold: 10.0,
+        costPerUnit: 280,
+        supplierId: supplierZari.id,
+        location: "Lace Drawer L-2",
+        branchId: mainBranch.id,
+      },
+      {
+        name: "Kundan Stones & Pearl Beads Assorted Box",
+        sku: "EMB-KUN-BOX",
+        type: "EMBELLISHMENT",
+        unit: "packets",
+        quantity: 12.0,
+        reorderThreshold: 3.0,
+        costPerUnit: 450,
+        supplierId: supplierZari.id,
+        location: "Embroidery Tray E-1",
+        branchId: mainBranch.id,
+      },
+      {
+        name: "YKK Concealed Blouse Zippers (10 inch)",
+        sku: "ZIP-YKK-10",
+        type: "ZIPPERS",
+        unit: "pcs",
+        quantity: 45.0,
+        reorderThreshold: 10.0,
+        costPerUnit: 35,
+        supplierId: supplierZari.id,
+        location: "Hardware Bin H-1",
+        branchId: mainBranch.id,
+      },
+    ],
+  });
+
   console.log("✅ Seed completed successfully!");
   console.log("------------------------------------------");
   console.log("👑 Owner Login:  owner@aazhi.studio / Aazhi@2026!");
