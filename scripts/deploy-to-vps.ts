@@ -45,7 +45,10 @@ async function deploy() {
 PORT=3005
 DATABASE_URL="postgresql://sms_user:sms_pass@localhost:5432/aazhi_designer"
 AUTH_SECRET="AazhiDesignerStudioSecretKey2026SecureHashBoutique"
+AUTH_TRUST_HOST=true
+AUTH_URL="http://157.66.191.104:3005"
 NEXTAUTH_URL="http://157.66.191.104:3005"
+NEXTAUTH_SECRET="AazhiDesignerStudioSecretKey2026SecureHashBoutique"
 NEXT_PUBLIC_APP_URL="http://157.66.191.104:3005"
 NEXT_PUBLIC_APP_NAME="Aazhi Designer Studio"
 STORAGE_PROVIDER="local"

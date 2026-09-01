@@ -1,35 +1,13 @@
 import type { NextAuthConfig } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { z } from "zod";
 
 /**
  * Auth.js configuration — edge-compatible.
  * This file does NOT import Prisma (not edge-safe).
  */
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
-
 export const authConfig: NextAuthConfig = {
-  providers: [
-    Credentials({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) return null;
-
-        // The actual user lookup happens in auth.ts (non-edge)
-        // This is just the provider definition
-        return null;
-      },
-    }),
-  ],
+  trustHost: true,
+  providers: [],
   pages: {
     signIn: "/login",
     error: "/login",
