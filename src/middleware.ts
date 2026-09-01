@@ -4,8 +4,8 @@ import { authConfig } from "@/lib/auth.config";
 export default NextAuth(authConfig).auth;
 
 export const config = {
-  // Protect all routes except public ones and webhooks
+  // Protect all routes except public ones, api/auth, and webhooks
   matcher: [
-    "/((?!api/webhooks|_next/static|_next/image|favicon.ico|fonts|images|login).*)",
+    "/((?!api/auth|api/webhooks|_next/static|_next/image|favicon.ico|fonts|images|login).*)",
   ],
 };
