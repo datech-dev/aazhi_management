@@ -7,7 +7,7 @@ import { logAudit } from "./audit.service";
  * Customer CRM Service for Aazhi Designer Studio
  */
 
-export async function getCustomers(query: CustomerSearchInput, branchId?: string | null) {
+export async function getCustomers(query: Partial<CustomerSearchInput> = {}, branchId?: string | null) {
   const { search, source, tag, page = 1, pageSize = 20, sortBy = "createdAt", sortOrder = "desc" } = query;
 
   const where: Prisma.CustomerWhereInput = {

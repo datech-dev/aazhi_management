@@ -1,277 +1,128 @@
-# VPS Production Deployment Guide — Aazhi Designer Studio
+# Production VPS Deployment Guide — Aazhi Designer Studio
 
-This guide explains how to deploy **Aazhi Designer Studio** to a Linux VPS (Ubuntu 22.04 / 24.04 LTS on Hetzner, DigitalOcean, Linode, AWS EC2, etc.).
-
----
-
-## Architecture on VPS
-
-```
-Internet (HTTPS)
-   ↓
-[ Nginx Reverse Proxy (Certbot SSL) :443 ]
-   ↓
-[ PM2 Process Manager / Node.js Next.js App :3000 ]
-   ↓
-[ PostgreSQL 16 Database :5432 (Local Unix Socket / 127.0.0.1) ]
-```
+This guide details the complete deployment process for running **Aazhi Designer Studio** on an Ubuntu 22.04 / 24.04 LTS VPS instance with Nginx, PostgreSQL 16, PM2 cluster management, and SSL encryption.
 
 ---
 
-## 1. Initial VPS Server Setup
+## 1. Prerequisites
 
-SSH into your server:
-```bash
-ssh root@YOUR_SERVER_IP
-```
+- **Server Hardware**: Minimum 2 vCPU, 2GB RAM (Recommended 4GB RAM).
+- **Domain Name**: Registered domain pointing to VPS IP address (e.g., `aazhi.studio`).
+- **OS**: Ubuntu 22.04 LTS / 24.04 LTS.
 
-Update packages and install core utilities:
-```bash
-apt update && apt upgrade -y
-apt install -y curl git ufw fail2ban unzip build-essential
-```
+---
 
-Setup basic firewall:
+## 2. Automated VPS Infrastructure Setup
+
+Connect to your VPS via SSH and run the setup script:
+
 ```bash
-ufw allow OpenSSH
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw enable
+# Clone the repository
+git clone https://github.com/datech-dev/aazhi_management.git /var/www/aazhi-studio
+cd /var/www/aazhi-studio
+
+# Execute VPS setup script
+chmod +x vps-setup.sh
+sudo ./vps-setup.sh
 ```
 
 ---
 
-## 2. Install Node.js 22 LTS & PM2
+## 3. Environment Configuration
+
+Create the production environment file:
 
 ```bash
-# Install Node.js 22.x
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-apt install -y nodejs
-
-# Verify versions
-node -v
-npm -v
-
-# Install PM2 process manager globally
-npm install -g pm2
+cp .env.example .env
+nano .env
 ```
 
----
-
-## 3. Install & Configure PostgreSQL 16
-
-```bash
-apt install -y postgresql postgresql-contrib
-
-# Start and enable PostgreSQL service
-systemctl start postgresql
-systemctl enable postgresql
-
-# Create Database and User
-sudo -u postgres psql <<EOF
-CREATE DATABASE aazhi_designer;
-CREATE USER aazhi_user WITH ENCRYPTED PASSWORD 'YOUR_STRONG_DB_PASSWORD_HERE';
-GRANT ALL PRIVILEGES ON DATABASE aazhi_designer TO aazhi_user;
-ALTER DATABASE aazhi_designer OWNER TO aazhi_user;
-\q
-EOF
-```
-
----
-
-## 4. Deploy Application Code
-
-Create a dedicated deploy user:
-```bash
-adduser --disabled-password --gecos "" aazhi
-usermod -aG sudo aazhi
-
-# Switch to aazhi user
-su - aazhi
-```
-
-Clone your repository:
-```bash
-git clone YOUR_GIT_REPO_URL /home/aazhi/aazhi-studio
-cd /home/aazhi/aazhi-studio
-```
-
-Install dependencies:
-```bash
-npm ci --legacy-peer-deps
-```
-
-Setup production environment file:
-```bash
-cp .env.example .env.production
-nano .env.production
-```
-
-Configure `.env.production` with your real production secrets:
+Set the following variables:
 ```env
-DATABASE_URL="postgresql://aazhi_user:YOUR_STRONG_DB_PASSWORD_HERE@localhost:5432/aazhi_designer"
-AUTH_SECRET="RUN_openssl_rand_base64_32"
-NEXTAUTH_URL="https://yourdomain.com"
+DATABASE_URL="postgresql://aazhi_user:AazhiProduction2026!@localhost:5432/aazhi_db?schema=public"
+AUTH_SECRET="your-32-character-random-auth-secret-key"
+AUTH_TRUST_HOST=true
+NEXTAUTH_URL="https://aazhi.studio"
 
-# Storage
-STORAGE_PROVIDER="local"
-STORAGE_LOCAL_PATH="./public/uploads"
-
-# WhatsApp & Instagram (when configured)
 WHATSAPP_ENABLED="false"
+WHATSAPP_ACCESS_TOKEN=""
 INSTAGRAM_ENABLED="false"
-
-# Production flags
-NODE_ENV="production"
-PORT=3000
-```
-
-Generate Prisma Client and push migrations:
-```bash
-npx prisma generate
-npx prisma db push
-
-# Optional: Seed initial admin user and default settings
-npx prisma db seed
-```
-
-Build the production Next.js bundle:
-```bash
-npm run build
+INSTAGRAM_ACCESS_TOKEN=""
 ```
 
 ---
 
-## 5. Configure PM2 Process Manager
+## 4. Database Push & Seeding
 
-Create `ecosystem.config.js`:
-```javascript
-module.exports = {
-  apps: [
-    {
-      name: 'aazhi-studio',
-      script: 'node_modules/next/dist/bin/next',
-      args: 'start',
-      cwd: '/home/aazhi/aazhi-studio',
-      instances: 'max',
-      exec_mode: 'cluster',
-      env: {
-        NODE_ENV: 'production',
-        PORT: 3000,
-      },
-      env_file: '.env.production',
-      max_memory_restart: '1G',
-      exp_backoff_restart_delay: 100,
-    },
-  ],
-};
+```bash
+# Install dependencies
+npm install --legacy-peer-deps
+
+# Generate Prisma Client & push database schema
+npm run db:generate
+npm run db:push
+
+# Seed initial boutique data & demo accounts
+npm run db:seed
 ```
 
-Start the application with PM2:
+---
+
+## 5. Build & PM2 Cluster Execution
+
 ```bash
+# Compile Next.js production build
+npm run build
+
+# Start Next.js app with PM2
 pm2 start ecosystem.config.js
 pm2 save
-pm2 startup
-```
-(Copy and run the `sudo env PATH=...` command displayed by PM2 to enable auto-restart on system reboot).
-
----
-
-## 6. Configure Nginx Reverse Proxy with SSL
-
-Exit to root user:
-```bash
-exit # back to root
-apt install -y nginx certbot python3-certbot-nginx
-```
-
-Create `/etc/nginx/sites-available/aazhi.conf`:
-```nginx
-server {
-    server_name yourdomain.com www.yourdomain.com;
-
-    client_max_body_size 25M;
-
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # Cache static Next.js assets
-    location /_next/static {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_cache_valid 200 365d;
-        add_header Cache-Control "public, max-age=31536000, immutable";
-    }
-
-    # Uploads directory
-    location /uploads/ {
-        alias /home/aazhi/aazhi-studio/public/uploads/;
-        expires 30d;
-        add_header Cache-Control "public, max-age=2592000";
-    }
-}
-```
-
-Enable site and test Nginx:
-```bash
-ln -s /etc/nginx/sites-available/aazhi.conf /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-nginx -t
-systemctl reload nginx
-```
-
-Obtain Free SSL Certificate via Let's Encrypt:
-```bash
-certbot --nginx -d yourdomain.com -d www.yourdomain.com
+sudo pm2 startup
 ```
 
 ---
 
-## 7. Daily Database Automated Backup Strategy
+## 6. Nginx & SSL Configuration
 
-Create a backup script `/home/aazhi/backup-db.sh`:
 ```bash
-#!/bin/bash
-BACKUP_DIR="/home/aazhi/backups"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-mkdir -p $BACKUP_DIR
+# Copy Nginx configuration
+sudo cp docs/aazhi-studio.nginx.conf /etc/nginx/sites-available/aazhi-studio
+sudo ln -s /etc/nginx/sites-available/aazhi-studio /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
 
-# Dump PostgreSQL database
-pg_dump -U aazhi_user -h localhost aazhi_designer | gzip > $BACKUP_DIR/aazhi_db_$TIMESTAMP.sql.gz
+# Test Nginx syntax
+sudo nginx -t
 
-# Retain only last 14 days of backups
-find $BACKUP_DIR -type f -name "aazhi_db_*.sql.gz" -mtime +14 -delete
-```
+# Obtain Let's Encrypt SSL Certificate
+sudo certbot --nginx -d aazhi.studio -d www.aazhi.studio
 
-Make executable and add to crontab:
-```bash
-chmod +x /home/aazhi/backup-db.sh
-(crontab -l 2>/dev/null; echo "0 3 * * * /home/aazhi/backup-db.sh") | crontab -
+# Reload Nginx
+sudo systemctl reload nginx
 ```
 
 ---
 
-## 8. Continuous Updates & Deployment Script
+## 7. Automated Crontab Database Backups
 
-Create `deploy.sh` in the project root:
+Schedule daily database backups:
+
 ```bash
-#!/bin/bash
-set -e
+# Make backup script executable
+chmod +x scripts/backup-db.sh
 
-echo "🚀 Deploying latest Aazhi Studio updates..."
-git pull origin main
-npm ci --legacy-peer-deps
-npx prisma generate
-npx prisma db push --accept-data-loss
-npm run build
-pm2 reload aazhi-studio --update-env
-echo "✅ Deployment completed successfully!"
+# Open crontab
+crontab -e
 ```
+
+Add daily 2:00 AM backup cron job:
+```cron
+0 2 * * * /var/www/aazhi-studio/scripts/backup-db.sh >> /var/log/aazhi-db-backup.log 2>&1
+```
+
+---
+
+## 8. Verification & Smoke Testing
+
+1. Open `https://aazhi.studio` in browser.
+2. Sign in with demo credentials (`owner@aazhi.studio` / `Aazhi@2026!`).
+3. Verify Customer 360, Products, Measurement Sheets, Order Booking, Kanban Pipeline, Payments Ledger, Reports, and Staff Settings.

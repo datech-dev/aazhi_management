@@ -3,8 +3,8 @@ import type { Prisma } from "@prisma/client";
 
 export interface LogAuditParams {
   userId?: string | null;
-  action: "create" | "update" | "delete" | "login" | "status_change" | "void" | "refund";
-  entityType: "customer" | "order" | "payment" | "lead" | "product" | "measurement" | "inventory" | "settings";
+  action: string;
+  entityType: string;
   entityId?: string | null;
   oldValue?: Record<string, unknown> | null;
   newValue?: Record<string, unknown> | null;
