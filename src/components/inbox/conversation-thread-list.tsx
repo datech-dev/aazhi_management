@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Search, MessageSquare, Camera, Phone, User, Calendar } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, MessageSquare, Camera, Phone } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface ConversationItem {
@@ -27,7 +28,7 @@ interface ConversationItem {
 interface ConversationThreadListProps {
   conversations: ConversationItem[];
   selectedId?: string;
-  onSelectThread: (id: string) => void;
+  onSelectThread?: (id: string) => void;
 }
 
 export function ConversationThreadList({
@@ -35,8 +36,17 @@ export function ConversationThreadList({
   selectedId,
   onSelectThread,
 }: ConversationThreadListProps) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [channelFilter, setChannelFilter] = useState<string>("ALL");
+
+  const handleSelect = (id: string) => {
+    if (onSelectThread) {
+      onSelectThread(id);
+    } else {
+      router.push(`/inbox?id=${id}`);
+    }
+  };
 
   const filtered = conversations.filter((c) => {
     const name = c.customer?.fullName || c.subject || "Unknown";
@@ -120,7 +130,7 @@ export function ConversationThreadList({
             return (
               <button
                 key={item.id}
-                onClick={() => onSelectThread(item.id)}
+                onClick={() => handleSelect(item.id)}
                 className={`w-full p-3 text-left transition-colors flex items-start gap-3 ${
                   isSelected ? "bg-primary/10 border-l-4 border-primary" : "hover:bg-muted/40"
                 }`}

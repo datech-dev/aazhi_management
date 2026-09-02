@@ -3,6 +3,8 @@ import { ConversationThreadList } from "@/components/inbox/conversation-thread-l
 import { InboxChatView } from "@/components/inbox/inbox-chat-view";
 import { Inbox } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Unified Social Inbox | Aazhi Designer Studio",
   description: "Centralized WhatsApp & Instagram communication hub",
@@ -57,12 +59,6 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
         <ConversationThreadList
           conversations={conversationsResult.items as any}
           selectedId={selectedThreadId}
-          onSelectThread={(id) => {
-            // Client navigation or window location
-            if (typeof window !== "undefined") {
-              window.location.href = `/inbox?id=${id}`;
-            }
-          }}
         />
 
         {activeConversation ? (
