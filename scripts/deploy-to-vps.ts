@@ -3,6 +3,8 @@ import { runRemote } from "./ssh-helper";
 async function deploy() {
   console.log("🚀 Starting deployment of Aazhi Designer Studio to VPS 157.66.191.104...\n");
 
+  const domain = "aazhistore.zetalink.cloud";
+
   // Step 1: Install Node.js 22 & PM2 if missing
   console.log("📦 1/7 Checking/Installing Node.js 22 LTS & PM2...");
   await runRemote(`
@@ -40,16 +42,16 @@ async function deploy() {
   `);
 
   // Step 4: Configure Production Environment Variables on Port 3005
-  console.log("\n⚙️ 4/7 Writing production .env configuration on port 3005...");
+  console.log("\n⚙️ 4/7 Writing production .env configuration for " + domain + "...");
   const envContent = `
 PORT=3005
 DATABASE_URL="postgresql://sms_user:sms_pass@localhost:5432/aazhi_designer"
 AUTH_SECRET="AazhiDesignerStudioSecretKey2026SecureHashBoutique"
 AUTH_TRUST_HOST=true
-AUTH_URL="http://157.66.191.104:3005"
-NEXTAUTH_URL="http://157.66.191.104:3005"
+AUTH_URL="https://${domain}"
+NEXTAUTH_URL="https://${domain}"
 NEXTAUTH_SECRET="AazhiDesignerStudioSecretKey2026SecureHashBoutique"
-NEXT_PUBLIC_APP_URL="http://157.66.191.104:3005"
+NEXT_PUBLIC_APP_URL="https://${domain}"
 NEXT_PUBLIC_APP_NAME="Aazhi Designer Studio"
 STORAGE_PROVIDER="local"
 STORAGE_LOCAL_PATH="./public/uploads"
@@ -88,26 +90,25 @@ EOF
   console.log("\n🚦 7/7 Starting / Reloading application on Port 3005 with PM2...");
   await runRemote(`
     cd /var/www/aazhi_management
-    pm2 delete aazhi-studio || true
-    pm2 start npm --name "aazhi-studio" -- run start -- -p 3005
+    pm2 restart aazhi-studio --update-env || pm2 start npm --name "aazhi-studio" -- run start -- -p 3005
     pm2 save
   `);
 
   // Step 8: Verify health check
-  console.log("\n🔍 Verifying health check on http://127.0.0.1:3005...");
+  console.log("\n🔍 Verifying health check on https://" + domain + "...");
   const health = await runRemote(`
     sleep 3
-    curl -Is http://127.0.0.1:3005/login | head -n 5
+    curl -Is https://${domain}/login | head -n 5
   `);
   console.log(health.stdout);
 
   console.log("\n✨ DEPLOYMENT SUCCESSFUL! ✨");
   console.log("-----------------------------------------------------------------");
-  console.log("🌐 Direct App URL: http://157.66.191.104:3005");
-  console.log("🔐 Login Page:     http://157.66.191.104:3005/login");
-  console.log("👑 Owner Login:    owner@aazhi.studio / Aazhi@2026!");
-  console.log("🛍️ Sales Login:    sales@aazhi.studio / Aazhi@2026!");
-  console.log("✂️ Tailor Login:   tailor@aazhi.studio / Aazhi@2026!");
+  console.log(`🌐 Production App URL: https://${domain}`);
+  console.log(`🔐 Login Portal:      https://${domain}/login`);
+  console.log("👑 Owner Login:       owner@aazhi.studio / Aazhi@2026!");
+  console.log("🛍️ Sales Login:       sales@aazhi.studio / Aazhi@2026!");
+  console.log("✂️ Tailor Login:      tailor@aazhi.studio / Aazhi@2026!");
   console.log("-----------------------------------------------------------------");
 }
 
