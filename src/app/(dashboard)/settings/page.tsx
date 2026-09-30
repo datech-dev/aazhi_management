@@ -1,13 +1,12 @@
 import { getBusinessSettings, getAuditLogs } from "@/services/settings.service";
-import { BusinessSettingsForm } from "@/components/settings/business-settings-form";
-import { AuditLogTable } from "@/components/settings/audit-log-table";
+import { SettingsTabContainer } from "@/components/settings/settings-tab-container";
 import { Settings } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Studio Business Settings | Aazhi Designer Studio",
-  description: "Boutique branding, sequence numbering, tax defaults, and audit logs",
+  description: "Boutique branding, sequence numbering, tax defaults, and social integrations",
 };
 
 interface SettingsPageProps {
@@ -31,19 +30,16 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <div>
           <h1 className="text-2xl font-bold font-heading text-foreground flex items-center gap-2">
             <Settings className="w-6 h-6 text-primary" />
-            Studio Business Settings & System Audit Logs
+            Studio Business Settings & Integrations
           </h1>
           <p className="text-sm text-muted-foreground">
-            Configure studio branding, GSTIN, sequence number prefixes, and inspect activity logs.
+            Manage studio branding, WhatsApp & Instagram live API connections, sequence numbers, and system audit logs.
           </p>
         </div>
       </div>
 
-      {/* Business Settings Form */}
-      <BusinessSettingsForm initialSettings={settings} />
-
-      {/* Audit Log Table */}
-      <AuditLogTable logs={auditLogsResult.items as any} />
+      {/* Main Tabbed Container */}
+      <SettingsTabContainer settings={settings} auditLogs={auditLogsResult.items as any} />
     </div>
   );
 }

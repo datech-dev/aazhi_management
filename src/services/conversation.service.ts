@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma, ChannelType, ConversationStatus, MessageDirection, MessageStatus } from "@prisma/client";
-import { getChannelAdapter } from "./messaging.service";
+import { getChannelAdapter, getChannelAdapterAsync } from "./messaging.service";
 import { logAudit } from "./audit.service";
 
 /**
@@ -160,7 +160,7 @@ export async function sendMessage(
 
   // 2. Dispatch via Channel Adapter (WhatsApp/Instagram or Mock)
   if (conversation.channel === ChannelType.WHATSAPP || conversation.channel === ChannelType.INSTAGRAM) {
-    const adapter = getChannelAdapter(conversation.channel);
+    const adapter = await getChannelAdapterAsync(conversation.channel);
     try {
       if (mediaUrl) {
         await adapter.sendImageMessage(recipient, mediaUrl, content);

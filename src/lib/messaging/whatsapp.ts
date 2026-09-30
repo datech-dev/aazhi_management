@@ -1,29 +1,53 @@
 import type { ChannelAdapter, IncomingMessagePayload, MessageResult } from "./types";
+import { prisma } from "@/lib/prisma";
 
 export class WhatsAppAdapter implements ChannelAdapter {
   private accessToken: string;
   private phoneNumberId: string;
   private verifyToken: string;
 
-  constructor() {
-    this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN || "";
-    this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || "";
-    this.verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "";
+  constructor(config?: { accessToken?: string; phoneNumberId?: string; verifyToken?: string }) {
+    this.accessToken = config?.accessToken || process.env.WHATSAPP_ACCESS_TOKEN || "";
+    this.phoneNumberId = config?.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || "";
+    this.verifyToken = config?.verifyToken || process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "";
+  }
+
+  private async getCredentials() {
+    let token = this.accessToken || process.env.WHATSAPP_ACCESS_TOKEN || "";
+    let phoneId = this.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || "";
+    let verify = this.verifyToken || process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "";
+
+    if (!token || !phoneId) {
+      try {
+        const dbSettings = await prisma.businessSettings.findMany({
+          where: { key: { in: ["whatsapp_access_token", "whatsapp_phone_number_id", "whatsapp_verify_token"] } },
+        });
+        const map = Object.fromEntries(dbSettings.map((s) => [s.key, s.value]));
+        token = token || map.whatsapp_access_token || "";
+        phoneId = phoneId || map.whatsapp_phone_number_id || "";
+        verify = verify || map.whatsapp_verify_token || "aazhi_studio_verify_token";
+      } catch (err) {
+        console.warn("[WhatsAppAdapter] Could not read DB credentials:", err);
+      }
+    }
+
+    return { token, phoneId, verify };
   }
 
   async sendTextMessage(to: string, text: string): Promise<MessageResult> {
-    if (!this.accessToken || !this.phoneNumberId) {
+    const { token, phoneId } = await this.getCredentials();
+    if (!token || !phoneId) {
       return { success: false, error: "WhatsApp API credentials not configured" };
     }
 
     try {
       const cleanedPhone = to.replace(/[\s\+\-]/g, "");
       const res = await fetch(
-        `https://graph.facebook.com/v21.0/${this.phoneNumberId}/messages`,
+        `https://graph.facebook.com/v21.0/${phoneId}/messages`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${this.accessToken}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -48,18 +72,19 @@ export class WhatsAppAdapter implements ChannelAdapter {
   }
 
   async sendImageMessage(to: string, imageUrl: string, caption?: string): Promise<MessageResult> {
-    if (!this.accessToken || !this.phoneNumberId) {
+    const { token, phoneId } = await this.getCredentials();
+    if (!token || !phoneId) {
       return { success: false, error: "WhatsApp API credentials not configured" };
     }
 
     try {
       const cleanedPhone = to.replace(/[\s\+\-]/g, "");
       const res = await fetch(
-        `https://graph.facebook.com/v21.0/${this.phoneNumberId}/messages`,
+        `https://graph.facebook.com/v21.0/${phoneId}/messages`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${this.accessToken}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -88,7 +113,8 @@ export class WhatsAppAdapter implements ChannelAdapter {
     templateName: string,
     variables: Record<string, string>
   ): Promise<MessageResult> {
-    if (!this.accessToken || !this.phoneNumberId) {
+    const { token, phoneId } = await this.getCredentials();
+    if (!token || !phoneId) {
       return { success: false, error: "WhatsApp API credentials not configured" };
     }
 
@@ -100,11 +126,11 @@ export class WhatsAppAdapter implements ChannelAdapter {
       }));
 
       const res = await fetch(
-        `https://graph.facebook.com/v21.0/${this.phoneNumberId}/messages`,
+        `https://graph.facebook.com/v21.0/${phoneId}/messages`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${this.accessToken}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -140,7 +166,7 @@ export class WhatsAppAdapter implements ChannelAdapter {
   verifyWebhook(req: Request): boolean {
     const url = new URL(req.url);
     const token = url.searchParams.get("hub.verify_token");
-    return token === this.verifyToken;
+    return token === (this.verifyToken || process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "aazhi_studio_verify_token");
   }
 
   parseIncomingWebhook(payload: unknown): IncomingMessagePayload[] {
@@ -166,13 +192,36 @@ export class WhatsAppAdapter implements ChannelAdapter {
           const attachments: IncomingMessagePayload["attachments"] = [];
 
           if (type === "text") {
-            content = (msg.text as Record<string, unknown>)?.body as string || "";
+            content = ((msg.text as Record<string, unknown>)?.body as string) || "";
           } else if (type === "image") {
             const img = msg.image as Record<string, unknown>;
             content = (img?.caption as string) || "[Image]";
             attachments.push({
               type: "image",
-              mimeType: img?.mime_type as string,
+              url: img?.url as string,
+              mimeType: (img?.mime_type as string) || "image/jpeg",
+            });
+          } else if (type === "video") {
+            const vid = msg.video as Record<string, unknown>;
+            content = (vid?.caption as string) || "[Video]";
+            attachments.push({
+              type: "video",
+              url: vid?.url as string,
+              mimeType: (vid?.mime_type as string) || "video/mp4",
+            });
+          } else if (type === "document") {
+            const doc = msg.document as Record<string, unknown>;
+            content = (doc?.caption as string) || (doc?.filename as string) || "[Document]";
+            attachments.push({
+              type: "document",
+              url: doc?.url as string,
+              mimeType: (doc?.mime_type as string) || "application/pdf",
+            });
+          } else if (type === "audio") {
+            content = "[Voice Message]";
+            attachments.push({
+              type: "audio",
+              mimeType: "audio/ogg",
             });
           }
 
