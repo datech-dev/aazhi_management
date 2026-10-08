@@ -59,6 +59,7 @@ WHATSAPP_ENABLED="true"
 INSTAGRAM_ENABLED="true"
 WHATSAPP_WEBHOOK_VERIFY_TOKEN="aazhi_studio_verify_token"
 INSTAGRAM_WEBHOOK_VERIFY_TOKEN="aazhi_studio_verify_token"
+BACKUP_CRON_SECRET="aazhi_instagram_backup_cron_secret_2026"
 NODE_ENV="production"
 `;
 
