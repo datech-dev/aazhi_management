@@ -55,8 +55,10 @@ NEXT_PUBLIC_APP_URL="https://${domain}"
 NEXT_PUBLIC_APP_NAME="Aazhi Designer Studio"
 STORAGE_PROVIDER="local"
 STORAGE_LOCAL_PATH="./public/uploads"
-WHATSAPP_ENABLED="false"
-INSTAGRAM_ENABLED="false"
+WHATSAPP_ENABLED="true"
+INSTAGRAM_ENABLED="true"
+WHATSAPP_WEBHOOK_VERIFY_TOKEN="aazhi_studio_verify_token"
+INSTAGRAM_WEBHOOK_VERIFY_TOKEN="aazhi_studio_verify_token"
 NODE_ENV="production"
 `;
 

@@ -52,6 +52,8 @@ model User {
   leadActivities     LeadActivity[]
   measurementProfiles MeasurementProfile[] @relation("CreatedByUser")
   rolePermissions    UserPermission[]
+  triggeredBackups   InstagramBackup[]    @relation("BackupTrigger")
+  restoreActions     InstagramRestoreLog[] @relation("RestoreActor")
 
   @@index([email])
   @@index([branchId])
@@ -1181,4 +1183,68 @@ model NumberSequence {
 
   @@unique([prefix, year, branchId])
   @@map("number_sequences")
+}
+
+// ============================================================
+// INSTAGRAM BACKUP & RECOVERY
+// ============================================================
+
+enum BackupStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum RestoreStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model InstagramBackup {
+  id              String       @id @default(cuid())
+  triggeredById   String?      // User ID who triggered (null = automatic)
+  triggerType     String       @default("manual")  // "manual" | "scheduled"
+  status          BackupStatus @default(PENDING)
+  instagramAccountId String?   // IG account ID snapshotted
+  instagramUsername  String?   // @username at time of backup
+  profileData     Json?        // Full profile snapshot
+  postsData       Json?        // Array of recent posts (up to 100)
+  storiesData     Json?        // Array of recent stories
+  followersCount  Int?
+  followingCount  Int?
+  mediaCount      Int?
+  highlightsData  Json?        // Story highlights
+  biographyText   String?      @db.Text
+  websiteUrl      String?
+  contactEmail    String?
+  businessCategory String?
+  errorMessage    String?      @db.Text
+  backupSizeKb    Int?         // Approximate size
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+
+  triggeredBy     User?        @relation("BackupTrigger", fields: [triggeredById], references: [id])
+  restoreLogs     InstagramRestoreLog[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("instagram_backups")
+}
+
+model InstagramRestoreLog {
+  id          String        @id @default(cuid())
+  backupId    String
+  restoredById String?
+  status      RestoreStatus @default(PENDING)
+  notes       String?       @db.Text
+  restoredAt  DateTime      @default(now())
+
+  backup     InstagramBackup @relation(fields: [backupId], references: [id], onDelete: Cascade)
+  restoredBy User?           @relation("RestoreActor", fields: [restoredById], references: [id])
+
+  @@index([backupId])
+  @@map("instagram_restore_logs")
 }

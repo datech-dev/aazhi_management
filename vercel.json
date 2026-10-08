@@ -1,0 +1,8 @@
+﻿{
+  "crons": [
+    {
+      "path": "/api/instagram-backup/trigger",
+      "schedule": "0 3 * * 1"
+    }
+  ]
+}
